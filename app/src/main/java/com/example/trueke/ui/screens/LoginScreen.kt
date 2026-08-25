@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.trueke.data.UserRepository
 
 @Composable
 fun LoginScreen(
@@ -38,6 +39,8 @@ fun LoginScreen(
     var password by remember {
         mutableStateOf("")
     }
+
+    var errorMessage by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -55,7 +58,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Intercambia lo que tienes por lo que necesitas",
+            text = "Intercambia y comunícate de forma simple, visual y segura",
             style = MaterialTheme.typography.bodyMedium
         )
 
@@ -94,10 +97,32 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+
+        if (errorMessage.isNotEmpty()) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+
         // Botón ingresar
         Button(
-            onClick = onLoginClick,
-            modifier = Modifier.fillMaxWidth()
+            onClick = {
+
+                val userExists = UserRepository.users.any { user ->
+                    user.email.equals(email.trim(), ignoreCase = true) &&
+                            user.password == password
+                }
+
+                if (userExists) {
+                    errorMessage = ""
+                    onLoginClick()
+                } else {
+                    errorMessage = "Correo o contraseña incorrectos"
+                }
+            }
         ) {
             Text("Ingresar")
         }

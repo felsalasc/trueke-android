@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
@@ -39,10 +40,6 @@ fun HomeScreen() {
 
     val products = ProductRepository.products
 
-    // ---------------------------
-    // Estados de filtros
-    // ---------------------------
-
     var expandedCategory by remember {
         mutableStateOf(false)
     }
@@ -67,10 +64,6 @@ fun HomeScreen() {
         "Tecnología",
         "Fotografía"
     )
-
-    // ---------------------------
-    // Filtrado de productos
-    // ---------------------------
 
     val filteredProducts = products.filter { product ->
 
@@ -97,10 +90,6 @@ fun HomeScreen() {
                 conditionMatches
     }
 
-    // ---------------------------
-    // Grilla principal
-    // ---------------------------
-
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         modifier = Modifier.padding(16.dp),
@@ -108,13 +97,13 @@ fun HomeScreen() {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
-        // TÍTULO
+        // ---------------------------
+        // TÍTULO Y ACCESIBILIDAD
+        // ---------------------------
 
         item(
             span = {
-                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
 
@@ -131,6 +120,20 @@ fun HomeScreen() {
                 )
 
                 Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                Text(
+                    text = "Trueke prioriza la comunicación visual y escrita entre usuarios.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Text(
+                    text = "La información importante siempre se presenta mediante texto para facilitar una experiencia accesible.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Spacer(
                     modifier = Modifier.height(20.dp)
                 )
             }
@@ -142,9 +145,7 @@ fun HomeScreen() {
 
         item(
             span = {
-                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
 
@@ -219,9 +220,7 @@ fun HomeScreen() {
 
         item(
             span = {
-                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
 
@@ -248,9 +247,7 @@ fun HomeScreen() {
 
         item(
             span = {
-                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
 
@@ -304,9 +301,7 @@ fun HomeScreen() {
 
         item(
             span = {
-                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
 
@@ -318,11 +313,13 @@ fun HomeScreen() {
             )
         }
 
+        // ---------------------------
+        // TÍTULO PRODUCTOS
+        // ---------------------------
+
         item(
             span = {
-                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
 
@@ -359,15 +356,15 @@ fun HomeScreen() {
             )
         }
 
-        // Sin resultados
+        // ---------------------------
+        // SIN RESULTADOS
+        // ---------------------------
 
         if (filteredProducts.isEmpty()) {
 
             item(
                 span = {
-                    androidx.compose.foundation.lazy.grid.GridItemSpan(
-                        maxLineSpan
-                    )
+                    GridItemSpan(maxLineSpan)
                 }
             ) {
 
@@ -380,7 +377,6 @@ fun HomeScreen() {
         }
     }
 }
-
 
 @Composable
 fun DistanceOption(
@@ -406,7 +402,6 @@ fun DistanceOption(
         )
     }
 }
-
 
 @Composable
 fun CatalogSummaryTable(
@@ -456,7 +451,6 @@ fun CatalogSummaryTable(
     }
 }
 
-
 @Composable
 fun TableRow(
     title: String,
@@ -481,7 +475,6 @@ fun TableRow(
         )
     }
 }
-
 
 @Composable
 fun ProductCard(
@@ -529,17 +522,17 @@ fun ProductCard(
             )
 
             Text(
-                text = "Valor: $${product.referenceValue}",
+                text = "Valor referencial: $${product.referenceValue}",
                 style = MaterialTheme.typography.bodySmall
             )
 
             Text(
-                text = "${product.distanceKm} km",
+                text = "Distancia: ${product.distanceKm} km",
                 style = MaterialTheme.typography.bodySmall
             )
 
             Text(
-                text = "Usuario: ${product.owner}",
+                text = "Publicado por: ${product.owner}",
                 style = MaterialTheme.typography.bodySmall
             )
 
@@ -558,12 +551,13 @@ fun ProductCard(
 
             Button(
                 onClick = {
-                    // Próximamente generar match
+                    // Próxima etapa:
+                    // iniciar comunicación escrita con el propietario
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
 
-                Text("Me interesa")
+                Text("Contactar por mensaje")
             }
         }
     }
