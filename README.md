@@ -31,6 +31,23 @@ un intercambio.
 - Cinco productos almacenados localmente
 - Visualización de distancia, categoría, estado y valor referencial
 
+## Semana 4 - Integración de funcionalidades Kotlin
+
+Durante la Semana 4 se incorporaron y reforzaron funcionalidades utilizando Kotlin:
+
+- Adaptación y validación de las vistas de Login, Registro y Recuperar contraseña.
+- Implementación de un `Array<Product>` mediante `arrayOf()` para almacenar 5 productos.
+- Uso de colecciones Kotlin mediante `List`, `listOf()` y `filter()`.
+- Implementación de la función `filterProducts()` para filtrar productos por:
+  - categoría;
+  - distancia máxima;
+  - estado del producto.
+- Interfaz adaptable mediante `GridCells.Adaptive`.
+- Formulario de registro desplazable para mejorar la experiencia en dispositivos pequeños.
+- Validación del correo electrónico en recuperación de contraseña.
+- Incorporación del permiso de Internet en `AndroidManifest.xml`.
+
+
 ## Autor
 
 Felipe Salas
