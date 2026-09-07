@@ -32,6 +32,14 @@ fun ForgotPasswordScreen(
         mutableStateOf("")
     }
 
+    var message by remember {
+        mutableStateOf("")
+    }
+
+    var isError by remember {
+        mutableStateOf(false)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -45,18 +53,25 @@ fun ForgotPasswordScreen(
             style = MaterialTheme.typography.headlineMedium
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
 
         Text(
             text = "Ingresa tu correo y te enviaremos instrucciones para recuperar tu cuenta.",
             style = MaterialTheme.typography.bodyMedium
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                message = ""
+            },
             label = {
                 Text("Correo electrónico")
             },
@@ -64,25 +79,71 @@ fun ForgotPasswordScreen(
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
-            )
+            ),
+            isError = isError
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        if (message.isNotEmpty()) {
+
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
+
+            Text(
+                text = message,
+                color = if (isError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
 
         Button(
             onClick = {
-                // Más adelante implementaremos la recuperación real
+
+                val cleanEmail = email.trim()
+
+                when {
+
+                    cleanEmail.isEmpty() -> {
+                        isError = true
+                        message = "Debes ingresar tu correo electrónico."
+                    }
+
+                    !cleanEmail.contains("@") ||
+                            !cleanEmail.contains(".") -> {
+
+                        isError = true
+                        message = "Ingresa un correo electrónico válido."
+                    }
+
+                    else -> {
+                        isError = false
+                        message =
+                            "Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña."
+                    }
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
+
             Text("Recuperar contraseña")
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
 
         TextButton(
             onClick = onBackToLogin
         ) {
+
             Text("Volver al inicio de sesión")
         }
     }

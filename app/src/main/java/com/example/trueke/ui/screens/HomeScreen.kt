@@ -65,41 +65,29 @@ fun HomeScreen() {
         "Fotografía"
     )
 
-    val filteredProducts = products.filter { product ->
-
-        val categoryMatches =
-            selectedCategory == "Todas" ||
-                    product.category == selectedCategory
-
-        val distanceMatches =
-            product.distanceKm <= selectedDistance
-
-        val conditionMatches =
-            !onlyGoodCondition ||
-                    product.condition.contains(
-                        "Buen",
-                        ignoreCase = true
-                    ) ||
-                    product.condition.contains(
-                        "Excelente",
-                        ignoreCase = true
-                    )
-
-        categoryMatches &&
-                distanceMatches &&
-                conditionMatches
-    }
+    val filteredProducts = filterProducts(
+        products = products,
+        category = selectedCategory,
+        maxDistance = selectedDistance,
+        onlyGoodCondition = onlyGoodCondition
+    )
 
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+
+        columns = GridCells.Adaptive(
+            minSize = 160.dp
+        ),
+
         modifier = Modifier.padding(16.dp),
+
         horizontalArrangement = Arrangement.spacedBy(12.dp),
+
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
-        // ---------------------------
+        // --------------------------------------------------
         // TÍTULO Y ACCESIBILIDAD
-        // ---------------------------
+        // --------------------------------------------------
 
         item(
             span = {
@@ -139,9 +127,9 @@ fun HomeScreen() {
             }
         }
 
-        // ---------------------------
-        // COMBO BOX
-        // ---------------------------
+        // --------------------------------------------------
+        // COMBO BOX CATEGORÍA
+        // --------------------------------------------------
 
         item(
             span = {
@@ -214,9 +202,9 @@ fun HomeScreen() {
             }
         }
 
-        // ---------------------------
-        // CHECKBOX
-        // ---------------------------
+        // --------------------------------------------------
+        // CHECKBOX ESTADO
+        // --------------------------------------------------
 
         item(
             span = {
@@ -241,9 +229,9 @@ fun HomeScreen() {
             }
         }
 
-        // ---------------------------
-        // RADIO BUTTONS
-        // ---------------------------
+        // --------------------------------------------------
+        // RADIO BUTTONS DISTANCIA
+        // --------------------------------------------------
 
         item(
             span = {
@@ -295,9 +283,9 @@ fun HomeScreen() {
             }
         }
 
-        // ---------------------------
+        // --------------------------------------------------
         // TABLA RESUMEN
-        // ---------------------------
+        // --------------------------------------------------
 
         item(
             span = {
@@ -313,9 +301,9 @@ fun HomeScreen() {
             )
         }
 
-        // ---------------------------
+        // --------------------------------------------------
         // TÍTULO PRODUCTOS
-        // ---------------------------
+        // --------------------------------------------------
 
         item(
             span = {
@@ -345,9 +333,9 @@ fun HomeScreen() {
             }
         }
 
-        // ---------------------------
+        // --------------------------------------------------
         // PRODUCTOS EN GRILLA
-        // ---------------------------
+        // --------------------------------------------------
 
         items(filteredProducts) { product ->
 
@@ -356,9 +344,9 @@ fun HomeScreen() {
             )
         }
 
-        // ---------------------------
+        // --------------------------------------------------
         // SIN RESULTADOS
-        // ---------------------------
+        // --------------------------------------------------
 
         if (filteredProducts.isEmpty()) {
 
@@ -377,6 +365,49 @@ fun HomeScreen() {
         }
     }
 }
+
+
+// --------------------------------------------------
+// FUNCIÓN KOTLIN PARA FILTRAR PRODUCTOS
+// --------------------------------------------------
+
+fun filterProducts(
+    products: Array<Product>,
+    category: String,
+    maxDistance: Int,
+    onlyGoodCondition: Boolean
+): List<Product> {
+
+    return products.filter { product ->
+
+        val categoryMatches =
+            category == "Todas" ||
+                    product.category == category
+
+        val distanceMatches =
+            product.distanceKm <= maxDistance
+
+        val conditionMatches =
+            !onlyGoodCondition ||
+                    product.condition.contains(
+                        "Buen",
+                        ignoreCase = true
+                    ) ||
+                    product.condition.contains(
+                        "Excelente",
+                        ignoreCase = true
+                    )
+
+        categoryMatches &&
+                distanceMatches &&
+                conditionMatches
+    }
+}
+
+
+// --------------------------------------------------
+// OPCIÓN DE DISTANCIA
+// --------------------------------------------------
 
 @Composable
 fun DistanceOption(
@@ -402,6 +433,11 @@ fun DistanceOption(
         )
     }
 }
+
+
+// --------------------------------------------------
+// TABLA RESUMEN DEL CATÁLOGO
+// --------------------------------------------------
 
 @Composable
 fun CatalogSummaryTable(
@@ -451,6 +487,11 @@ fun CatalogSummaryTable(
     }
 }
 
+
+// --------------------------------------------------
+// FILA DE TABLA
+// --------------------------------------------------
+
 @Composable
 fun TableRow(
     title: String,
@@ -461,6 +502,7 @@ fun TableRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 5.dp),
+
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
 
@@ -475,6 +517,11 @@ fun TableRow(
         )
     }
 }
+
+
+// --------------------------------------------------
+// TARJETA DE PRODUCTO
+// --------------------------------------------------
 
 @Composable
 fun ProductCard(

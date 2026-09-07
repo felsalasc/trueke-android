@@ -4,7 +4,7 @@ import com.example.trueke.model.Product
 
 object ProductRepository {
 
-    val products = listOf(
+    val products = arrayOf(
 
         Product(
             id = 1,
