@@ -4,7 +4,7 @@ import com.example.trueke.model.User
 
 object UserRepository {
 
-    val users = mutableListOf(
+    val initialUsers: Array<User> = arrayOf(
         User(
             name = "Ana Pérez",
             email = "ana@trueke.cl",
@@ -41,4 +41,6 @@ object UserRepository {
             communicationPreference = "Visual"
         )
     )
+
+    val users = initialUsers.toMutableList()
 }

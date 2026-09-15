@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.trueke.data.ProductRepository
 import com.example.trueke.model.Product
+import com.example.trueke.utils.filterProducts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,12 +66,34 @@ fun HomeScreen() {
         "Fotografía"
     )
 
-    val filteredProducts = filterProducts(
-        products = products,
-        category = selectedCategory,
-        maxDistance = selectedDistance,
-        onlyGoodCondition = onlyGoodCondition
-    )
+    // --------------------------------------------------
+    // FUNCIÓN DE ORDEN SUPERIOR + LAMBDA
+    // --------------------------------------------------
+
+    val filteredProducts = filterProducts(products) { product ->
+
+        val categoryMatches =
+            selectedCategory == "Todas" ||
+                    product.category == selectedCategory
+
+        val distanceMatches =
+            product.distanceKm <= selectedDistance
+
+        val conditionMatches =
+            !onlyGoodCondition ||
+                    product.condition.contains(
+                        "Buen",
+                        ignoreCase = true
+                    ) ||
+                    product.condition.contains(
+                        "Excelente",
+                        ignoreCase = true
+                    )
+
+        categoryMatches &&
+                distanceMatches &&
+                conditionMatches
+    }
 
     LazyVerticalGrid(
 
@@ -83,6 +106,7 @@ fun HomeScreen() {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
 
         verticalArrangement = Arrangement.spacedBy(12.dp)
+
     ) {
 
         // --------------------------------------------------
@@ -363,44 +387,6 @@ fun HomeScreen() {
                 )
             }
         }
-    }
-}
-
-
-// --------------------------------------------------
-// FUNCIÓN KOTLIN PARA FILTRAR PRODUCTOS
-// --------------------------------------------------
-
-fun filterProducts(
-    products: Array<Product>,
-    category: String,
-    maxDistance: Int,
-    onlyGoodCondition: Boolean
-): List<Product> {
-
-    return products.filter { product ->
-
-        val categoryMatches =
-            category == "Todas" ||
-                    product.category == category
-
-        val distanceMatches =
-            product.distanceKm <= maxDistance
-
-        val conditionMatches =
-            !onlyGoodCondition ||
-                    product.condition.contains(
-                        "Buen",
-                        ignoreCase = true
-                    ) ||
-                    product.condition.contains(
-                        "Excelente",
-                        ignoreCase = true
-                    )
-
-        categoryMatches &&
-                distanceMatches &&
-                conditionMatches
     }
 }
 

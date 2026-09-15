@@ -9,9 +9,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -29,12 +35,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.trueke.data.UserRepository
 import com.example.trueke.model.User
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
+import com.example.trueke.utils.isValidEmail
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
@@ -62,9 +64,13 @@ fun RegisterScreen(
         mutableStateOf("")
     }
 
-    var region by remember { mutableStateOf("") }
-    var expandedRegion by remember { mutableStateOf(false) }
+    var region by remember {
+        mutableStateOf("")
+    }
 
+    var expandedRegion by remember {
+        mutableStateOf(false)
+    }
 
     val regions = listOf(
         "Arica y Parinacota",
@@ -84,7 +90,6 @@ fun RegisterScreen(
         "Aysén",
         "Magallanes"
     )
-
 
     Column(
         modifier = Modifier
@@ -118,7 +123,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Correo
+        // Correo electrónico
         OutlinedTextField(
             value = email,
             onValueChange = {
@@ -137,8 +142,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Spacer(modifier = Modifier.height(12.dp))
-
+        // Región
         ExposedDropdownMenuBox(
             expanded = expandedRegion,
             onExpandedChange = {
@@ -188,6 +192,8 @@ fun RegisterScreen(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Contraseña
         OutlinedTextField(
@@ -320,37 +326,52 @@ fun RegisterScreen(
 
                 when {
 
+                    // Validar campos obligatorios
                     name.isBlank() ||
                             email.isBlank() ||
                             password.isBlank() ||
                             confirmPassword.isBlank() -> {
 
-                        errorMessage = "Completa todos los campos"
+                        errorMessage =
+                            "Completa todos los campos"
                     }
 
+                    // Función de extensión Kotlin
+                    !email.isValidEmail() -> {
+
+                        errorMessage =
+                            "Ingresa un correo electrónico válido"
+                    }
+
+                    // Validar región
                     region.isBlank() -> {
-                        errorMessage = "Selecciona una región"
+
+                        errorMessage =
+                            "Selecciona una región"
                     }
 
-
+                    // Validar largo de contraseña
                     password.length < 6 -> {
 
                         errorMessage =
                             "La contraseña debe tener al menos 6 caracteres"
                     }
 
+                    // Validar coincidencia de contraseñas
                     password != confirmPassword -> {
 
                         errorMessage =
                             "Las contraseñas no coinciden"
                     }
 
+                    // Validar términos y condiciones
                     !acceptedTerms -> {
 
                         errorMessage =
                             "Debes aceptar los términos y condiciones"
                     }
 
+                    // Validar usuario existente
                     UserRepository.users.any {
                         it.email.equals(
                             email.trim(),
@@ -362,29 +383,38 @@ fun RegisterScreen(
                             "El correo ya se encuentra registrado"
                     }
 
+                    // Registro correcto
                     else -> {
 
-                        UserRepository.users.add(
-                            User(
-                                name = name.trim(),
-                                email = email.trim(),
-                                password = password,
-                                region = region,
-                                communicationPreference = communicationPreference
+                        try {
+
+                            UserRepository.users.add(
+                                User(
+                                    name = name.trim(),
+                                    email = email.trim(),
+                                    password = password,
+                                    region = region,
+                                    communicationPreference = communicationPreference
+                                )
                             )
-                        )
 
-                        successMessage =
-                            "Usuario registrado correctamente"
+                            successMessage =
+                                "Usuario registrado correctamente"
 
-                        // Limpiar formulario
-                        name = ""
-                        email = ""
-                        password = ""
-                        region = ""
-                        confirmPassword = ""
-                        communicationPreference = "Texto"
-                        acceptedTerms = false
+                            // Limpiar formulario
+                            name = ""
+                            email = ""
+                            password = ""
+                            confirmPassword = ""
+                            region = ""
+                            communicationPreference = "Texto"
+                            acceptedTerms = false
+
+                        } catch (e: Exception) {
+
+                            errorMessage =
+                                "Ocurrió un error al registrar el usuario"
+                        }
                     }
                 }
             },
