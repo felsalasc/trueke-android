@@ -1,53 +1,74 @@
 # Trueke
 
-Aplicación móvil desarrollada para la asignatura
-Desarrollo de Aplicaciones Móviles – DSY2204.
+Aplicación móvil desarrollada para la asignatura **Desarrollo de Aplicaciones Móviles – DSY2204** de Duoc UC.
 
 ## Descripción
 
-Trueke es una aplicación móvil orientada al intercambio de productos
-entre usuarios cercanos sin necesidad de utilizar dinero como medio
-principal de transacción.
+**Trueke** es una aplicación móvil orientada al intercambio de productos entre usuarios cercanos, sin necesidad de utilizar dinero como medio principal de transacción.
 
-Los usuarios pueden visualizar productos disponibles, consultar su
-valor referencial, distancia y estado, y manifestar interés en realizar
-un intercambio.
+La aplicación permite visualizar productos disponibles, consultar su categoría, estado, valor referencial y distancia, además de aplicar filtros para facilitar la búsqueda.
 
-## Tecnologías
+El proyecto considera principios de accesibilidad, priorizando la comunicación visual y escrita mediante textos claros, componentes de interfaz reconocibles y navegación simple.
+
+---
+
+## Tecnologías utilizadas
 
 - Kotlin
 - Android Studio
 - Jetpack Compose
 - Material Design 3
 - Navigation Compose
+- Git
+- GitHub
+
+---
 
 ## Funcionalidades desarrolladas
 
-- Inicio de sesión
-- Registro de usuario
-- Recuperación de contraseña
-- Navegación entre vistas
-- Catálogo de productos
-- Cinco productos almacenados localmente
-- Visualización de distancia, categoría, estado y valor referencial
+La aplicación actualmente incluye:
 
-## Semana 4 - Integración de funcionalidades Kotlin
+- Inicio de sesión.
+- Registro de usuarios.
+- Recuperación de contraseña.
+- Navegación entre vistas.
+- Catálogo de productos.
+- Productos almacenados localmente.
+- Filtro por categoría.
+- Filtro por distancia.
+- Filtro por estado del producto.
+- Tabla resumen del catálogo.
+- Grilla adaptable de productos.
+- Validación de formularios.
+- Preferencia de comunicación mediante RadioButton.
+- Aceptación de términos mediante Checkbox.
+- Selector de región mediante ComboBox.
+- Mensajes de error y confirmación.
+- Diseño adaptable mediante Jetpack Compose.
 
-Durante la Semana 4 se incorporaron y reforzaron funcionalidades utilizando Kotlin:
+---
 
-- Adaptación y validación de las vistas de Login, Registro y Recuperar contraseña.
-- Implementación de un `Array<Product>` mediante `arrayOf()` para almacenar 5 productos.
-- Uso de colecciones Kotlin mediante `List`, `listOf()` y `filter()`.
-- Implementación de la función `filterProducts()` para filtrar productos por:
-  - categoría;
-  - distancia máxima;
-  - estado del producto.
-- Interfaz adaptable mediante `GridCells.Adaptive`.
-- Formulario de registro desplazable para mejorar la experiencia en dispositivos pequeños.
-- Validación del correo electrónico en recuperación de contraseña.
-- Incorporación del permiso de Internet en `AndroidManifest.xml`.
+# Semana 5 – Actividad Sumativa 2
 
+## Integrando Kotlin a la aplicación móvil con Android Studio
 
-## Autor
+Durante la Semana 5 se incorporaron y reforzaron funcionalidades básicas y avanzadas del lenguaje de programación **Kotlin**.
 
-Felipe Salas
+El objetivo de esta etapa es aplicar funciones, colecciones, lambdas, funciones de orden superior, funciones de extensión y manejo de excepciones dentro de la aplicación Trueke.
+
+---
+
+## Colecciones Kotlin
+
+### Array de usuarios
+
+Se implementó un `Array<User>` utilizando `arrayOf()` que contiene cinco usuarios previamente registrados junto con sus contraseñas.
+
+```kotlin
+val initialUsers: Array<User> = arrayOf(
+    User(...),
+    User(...),
+    User(...),
+    User(...),
+    User(...)
+)
