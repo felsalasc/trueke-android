@@ -6,7 +6,7 @@ import com.example.trueke.model.Product
  * Función de orden superior para filtrar productos.
  *
  * Recibe:
- * - Un Array de productos.
+ * - Una lista de productos.
  * - Una función lambda que recibe un Product
  *   y devuelve true o false.
  *
@@ -14,7 +14,7 @@ import com.example.trueke.model.Product
  * - Una lista de productos que cumplen la condición.
  */
 fun filterProducts(
-    products: Array<Product>,
+    products: List<Product>,
     predicate: (Product) -> Boolean
 ): List<Product> {
 

@@ -1,64 +1,158 @@
 package com.example.trueke.data
 
 import com.example.trueke.model.Product
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 
 object ProductRepository {
 
-    val products = arrayOf(
+    private val firestore = FirebaseFirestore.getInstance()
 
-        Product(
-            id = 1,
-            name = "Bicicleta Oxford",
-            description = "Bicicleta aro 29 en muy buen estado. Ideal para ciudad y paseos.",
-            category = "Deportes",
-            condition = "Buen estado",
-            referenceValue = 120000,
-            distanceKm = 1.2,
-            owner = "Carlos"
-        ),
+    private const val COLLECTION_PRODUCTS = "products"
 
-        Product(
-            id = 2,
-            name = "PlayStation 4",
-            description = "Consola PlayStation 4 de 1 TB con dos controles.",
-            category = "Videojuegos",
-            condition = "Buen estado",
-            referenceValue = 150000,
-            distanceKm = 2.1,
-            owner = "Daniela"
-        ),
+    /**
+     * Escucha en tiempo real los productos almacenados en Firestore.
+     */
+    fun listenProducts(
+        onProductsChanged: (List<Product>) -> Unit,
+        onError: (String) -> Unit
+    ): ListenerRegistration {
 
-        Product(
-            id = 3,
-            name = "Guitarra acústica",
-            description = "Guitarra acústica en excelente estado, poco uso.",
-            category = "Instrumentos",
-            condition = "Excelente",
-            referenceValue = 110000,
-            distanceKm = 3.4,
-            owner = "Matías"
-        ),
+        return firestore
+            .collection(COLLECTION_PRODUCTS)
+            .addSnapshotListener { snapshot, exception ->
 
-        Product(
-            id = 4,
-            name = "Notebook Lenovo",
-            description = "Notebook Lenovo de 14 pulgadas, 8 GB RAM y SSD de 256 GB.",
-            category = "Tecnología",
-            condition = "Usado",
-            referenceValue = 180000,
-            distanceKm = 4.3,
-            owner = "Andrea"
-        ),
+                if (exception != null) {
 
-        Product(
-            id = 5,
-            name = "Cámara Canon",
-            description = "Cámara digital Canon con lente incluido y bolso de transporte.",
-            category = "Fotografía",
-            condition = "Muy buen estado",
-            referenceValue = 160000,
-            distanceKm = 5.1,
-            owner = "Pedro"
-        )
-    )
+                    onError(
+                        exception.localizedMessage
+                            ?: "Error al obtener los productos"
+                    )
+
+                    return@addSnapshotListener
+                }
+
+                if (snapshot == null) {
+                    onProductsChanged(emptyList())
+                    return@addSnapshotListener
+                }
+
+                val products = snapshot.documents.mapNotNull { document ->
+
+                    try {
+
+                        Product(
+                            id = document.id,
+                            name = document.getString("name") ?: "",
+                            description = document.getString("description") ?: "",
+                            category = document.getString("category") ?: "",
+                            condition = document.getString("condition") ?: "",
+                            referenceValue =
+                                document.getLong("referenceValue")
+                                    ?.toInt() ?: 0,
+                            distanceKm =
+                                document.getDouble("distanceKm") ?: 0.0,
+                            owner = document.getString("owner") ?: ""
+                        )
+
+                    } catch (e: Exception) {
+
+                        null
+                    }
+                }
+
+                onProductsChanged(products)
+            }
+    }
+
+    /**
+     * CREATE
+     */
+    fun addProduct(
+        product: Product,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+
+        val document =
+            firestore.collection(COLLECTION_PRODUCTS).document()
+
+        val productWithId =
+            product.copy(id = document.id)
+
+        document
+            .set(productWithId)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener { exception ->
+
+                onError(
+                    exception.localizedMessage
+                        ?: "No fue posible registrar el producto"
+                )
+            }
+    }
+
+    /**
+     * UPDATE
+     */
+    fun updateProduct(
+        product: Product,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+
+        if (product.id.isBlank()) {
+
+            onError("Producto inválido")
+            return
+        }
+
+        firestore
+            .collection(COLLECTION_PRODUCTS)
+            .document(product.id)
+            .set(product)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener { exception ->
+
+                onError(
+                    exception.localizedMessage
+                        ?: "No fue posible actualizar el producto"
+                )
+            }
+    }
+
+    /**
+     * DELETE
+     */
+    fun deleteProduct(
+        productId: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+
+        if (productId.isBlank()) {
+
+            onError("Producto inválido")
+            return
+        }
+
+        firestore
+            .collection(COLLECTION_PRODUCTS)
+            .document(productId)
+            .delete()
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener { exception ->
+
+                onError(
+                    exception.localizedMessage
+                        ?: "No fue posible eliminar el producto"
+                )
+            }
+    }
 }
