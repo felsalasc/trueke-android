@@ -33,15 +33,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.trueke.data.UserRepository
-import com.example.trueke.model.User
 import com.example.trueke.utils.isValidEmail
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onBackToLogin: () -> Unit
 ) {
+
+    val auth = FirebaseAuth.getInstance()
+    val firestore = FirebaseFirestore.getInstance()
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -62,6 +66,10 @@ fun RegisterScreen(
 
     var successMessage by remember {
         mutableStateOf("")
+    }
+
+    var isLoading by remember {
+        mutableStateOf(false)
     }
 
     var region by remember {
@@ -336,7 +344,7 @@ fun RegisterScreen(
                             "Completa todos los campos"
                     }
 
-                    // Función de extensión Kotlin
+                    // Validar correo
                     !email.isValidEmail() -> {
 
                         errorMessage =
@@ -371,57 +379,106 @@ fun RegisterScreen(
                             "Debes aceptar los términos y condiciones"
                     }
 
-                    // Validar usuario existente
-                    UserRepository.users.any {
-                        it.email.equals(
-                            email.trim(),
-                            ignoreCase = true
-                        )
-                    } -> {
-
-                        errorMessage =
-                            "El correo ya se encuentra registrado"
-                    }
-
-                    // Registro correcto
+                    // Registro con Firebase
                     else -> {
 
-                        try {
+                        isLoading = true
+                        errorMessage = ""
+                        successMessage = ""
 
-                            UserRepository.users.add(
-                                User(
-                                    name = name.trim(),
-                                    email = email.trim(),
-                                    password = password,
-                                    region = region,
-                                    communicationPreference = communicationPreference
-                                )
-                            )
+                        val cleanEmail = email.trim()
 
-                            successMessage =
-                                "Usuario registrado correctamente"
+                        auth.createUserWithEmailAndPassword(
+                            cleanEmail,
+                            password
+                        ).addOnCompleteListener { authTask ->
 
-                            // Limpiar formulario
-                            name = ""
-                            email = ""
-                            password = ""
-                            confirmPassword = ""
-                            region = ""
-                            communicationPreference = "Texto"
-                            acceptedTerms = false
+                            if (authTask.isSuccessful) {
 
-                        } catch (e: Exception) {
+                                val firebaseUser = auth.currentUser
 
-                            errorMessage =
-                                "Ocurrió un error al registrar el usuario"
+                                if (firebaseUser != null) {
+
+                                    val userData = hashMapOf(
+                                        "name" to name.trim(),
+                                        "email" to cleanEmail,
+                                        "region" to region,
+                                        "communicationPreference" to communicationPreference
+                                    )
+
+                                    firestore.collection("users")
+                                        .document(firebaseUser.uid)
+                                        .set(userData)
+                                        .addOnSuccessListener {
+
+                                            successMessage =
+                                                "Usuario registrado correctamente"
+
+                                            // Firebase deja autenticado al usuario
+                                            // después de crear la cuenta.
+                                            // Cerramos sesión para volver al login.
+                                            auth.signOut()
+
+                                            // Limpiar formulario
+                                            name = ""
+                                            email = ""
+                                            password = ""
+                                            confirmPassword = ""
+                                            region = ""
+                                            communicationPreference = "Texto"
+                                            acceptedTerms = false
+
+                                            isLoading = false
+                                        }
+                                        .addOnFailureListener {
+
+                                            errorMessage =
+                                                "La cuenta fue creada, pero no se pudieron guardar los datos"
+
+                                            isLoading = false
+                                        }
+
+                                } else {
+
+                                    errorMessage =
+                                        "No fue posible obtener el usuario registrado"
+
+                                    isLoading = false
+                                }
+
+                            } else {
+
+                                when (authTask.exception) {
+
+                                    is FirebaseAuthUserCollisionException -> {
+                                        errorMessage =
+                                            "El correo ya se encuentra registrado"
+                                    }
+
+                                    else -> {
+                                        errorMessage =
+                                            authTask.exception?.localizedMessage
+                                                ?: "Ocurrió un error al registrar el usuario"
+                                    }
+                                }
+
+                                isLoading = false
+                            }
                         }
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         ) {
 
-            Text("Registrarme")
+            Text(
+                if (isLoading) {
+                    "Registrando..."
+                } else {
+                    "Registrarme"
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))

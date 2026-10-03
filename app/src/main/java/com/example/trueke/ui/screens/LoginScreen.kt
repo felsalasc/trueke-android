@@ -1,5 +1,6 @@
 package com.example.trueke.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -20,10 +21,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.trueke.data.UserRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 
 @Composable
 fun LoginScreen(
@@ -31,6 +35,9 @@ fun LoginScreen(
     onRegisterClick: () -> Unit,
     onForgotPasswordClick: () -> Unit
 ) {
+
+    val auth = FirebaseAuth.getInstance()
+    val context = LocalContext.current
 
     var email by remember {
         mutableStateOf("")
@@ -40,7 +47,13 @@ fun LoginScreen(
         mutableStateOf("")
     }
 
-    var errorMessage by remember { mutableStateOf("") }
+    var errorMessage by remember {
+        mutableStateOf("")
+    }
+
+    var isLoading by remember {
+        mutableStateOf(false)
+    }
 
     Column(
         modifier = Modifier
@@ -67,7 +80,10 @@ fun LoginScreen(
         // Campo correo
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                errorMessage = ""
+            },
             label = {
                 Text("Correo electrónico")
             },
@@ -83,7 +99,10 @@ fun LoginScreen(
         // Campo contraseña
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                errorMessage = ""
+            },
             label = {
                 Text("Contraseña")
             },
@@ -97,8 +116,8 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-
         if (errorMessage.isNotEmpty()) {
+
             Text(
                 text = errorMessage,
                 color = MaterialTheme.colorScheme.error,
@@ -106,39 +125,107 @@ fun LoginScreen(
             )
         }
 
-
         // Botón ingresar
         Button(
             onClick = {
 
-                val userExists = UserRepository.users.any { user ->
-                    user.email.equals(email.trim(), ignoreCase = true) &&
-                            user.password == password
-                }
+                errorMessage = ""
 
-                if (userExists) {
-                    errorMessage = ""
-                    onLoginClick()
-                } else {
-                    errorMessage = "Correo o contraseña incorrectos"
+                val cleanEmail = email.trim()
+
+                when {
+
+                    cleanEmail.isBlank() || password.isBlank() -> {
+
+                        errorMessage =
+                            "Ingresa tu correo y contraseña"
+                    }
+
+                    else -> {
+
+                        isLoading = true
+
+                        auth.signInWithEmailAndPassword(
+                            cleanEmail,
+                            password
+                        ).addOnCompleteListener { task ->
+
+                            if (task.isSuccessful) {
+
+                                // Guardar datos básicos de sesión
+                                val sharedPreferences =
+                                    context.getSharedPreferences(
+                                        "trueke_session",
+                                        Context.MODE_PRIVATE
+                                    )
+
+                                sharedPreferences.edit()
+                                    .putBoolean(
+                                        "is_logged_in",
+                                        true
+                                    )
+                                    .putString(
+                                        "user_email",
+                                        cleanEmail
+                                    )
+                                    .putString(
+                                        "user_uid",
+                                        auth.currentUser?.uid ?: ""
+                                    )
+                                    .apply()
+
+                                errorMessage = ""
+                                isLoading = false
+
+                                onLoginClick()
+
+                            } else {
+
+                                errorMessage =
+                                    when (task.exception) {
+
+                                        is FirebaseAuthInvalidUserException ->
+                                            "Usuario no registrado"
+
+                                        is FirebaseAuthInvalidCredentialsException ->
+                                            "Correo o contraseña incorrectos"
+
+                                        else ->
+                                            "No fue posible iniciar sesión"
+                                    }
+
+                                isLoading = false
+                            }
+                        }
+                    }
                 }
-            }
+            },
+            enabled = !isLoading
         ) {
-            Text("Ingresar")
+
+            Text(
+                if (isLoading) {
+                    "Ingresando..."
+                } else {
+                    "Ingresar"
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         // Crear cuenta
         TextButton(
-            onClick = onRegisterClick
+            onClick = onRegisterClick,
+            enabled = !isLoading
         ) {
             Text("Crear una cuenta")
         }
 
         // Recuperar contraseña
         TextButton(
-            onClick = onForgotPasswordClick
+            onClick = onForgotPasswordClick,
+            enabled = !isLoading
         ) {
             Text("¿Olvidaste tu contraseña?")
         }
