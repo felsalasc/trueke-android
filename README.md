@@ -6,6 +6,16 @@ TRUEKE permite publicar y consultar productos para coordinar intercambios entre 
 
 Repositorio: [felsalasc/trueke-android](https://github.com/felsalasc/trueke-android).
 
+## Descargar e instalar
+
+La versión **1.0** está disponible en [GitHub Releases](https://github.com/felsalasc/trueke-android/releases/tag/v1.0.0).
+
+1. Descargar [app-release.apk](https://github.com/felsalasc/trueke-android/releases/download/v1.0.0/app-release.apk) desde el teléfono.
+2. Abrir el archivo y, si Android lo solicita, permitir la instalación desde la aplicación utilizada para descargarlo.
+3. Instalar y abrir TRUEKE. Requiere Android 7.0 o superior y conexión a internet.
+
+El APK publicado se descargó y su SHA-256 coincidió con el APK firmado y probado: `10e7cf047e9fa42364ba61ac45b5e918a7bcdda0fd6f2eee03c68fe26c3494af`. Si existe otra instalación con una firma diferente, Android puede rechazar la actualización.
+
 ## Funciones implementadas
 
 - Registro e inicio de sesión con Firebase Authentication.
@@ -149,7 +159,6 @@ Verificar registro, acceso incorrecto y correcto, recuperación, saludo, restaur
 ## Pendientes para la evaluación final
 
 - Completar la comprobación del aislamiento del historial con dos cuentas. Las reglas del historial ya fueron publicadas y se verificó el guardado y lectura reales con una cuenta.
-- Disponer un enlace público de descarga del APK firmado.
 - Preparar la presentación técnica, el video y el ZIP de entrega.
 
 La reproducción requiere un servicio de texto a voz con español disponible y volumen multimedia audible. Si falta el servicio o el idioma, se muestra un aviso y el texto sigue disponible. La voz se detiene y sus recursos se liberan al cerrar el diálogo.
