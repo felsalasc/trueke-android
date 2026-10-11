@@ -1,0 +1,103 @@
+rules_version = '2';
+
+// Propuesta local: contrastar con las reglas desplegadas antes de publicarla.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsStoredProduct() {
+      return signedIn()
+        && resource.data.keys().hasAll(['ownerUid'])
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    function validProduct(productId) {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'id', 'name', 'description', 'category', 'condition',
+          'referenceValue', 'distanceKm', 'owner', 'ownerUid'
+        ])
+        && data.keys().hasOnly([
+          'id', 'name', 'description', 'category', 'condition',
+          'referenceValue', 'distanceKm', 'owner', 'ownerUid'
+        ])
+        && data.id == productId
+        && data.name is string
+        && data.description is string
+        && data.category is string
+        && data.condition is string
+        && data.referenceValue is int
+        && data.referenceValue >= 0
+        && data.referenceValue <= 2147483647
+        && data.distanceKm is number
+        && data.distanceKm >= 0
+        && !math.isNaN(data.distanceKm)
+        && !math.isInfinite(data.distanceKm)
+        && data.owner is string
+        && data.ownerUid is string;
+    }
+
+    function validProfile() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'name', 'email', 'region', 'communicationPreference'
+        ])
+        && data.keys().hasOnly([
+          'name', 'email', 'region', 'communicationPreference'
+        ])
+        && data.name is string
+        && data.email is string
+        && data.region is string
+        && data.communicationPreference is string;
+    }
+
+    function validCommunicationRecord() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['mode', 'request', 'response', 'createdAt'])
+        && data.keys().hasOnly(['mode', 'request', 'response', 'createdAt'])
+        && data.mode is string
+        && data.mode in ['write', 'speak']
+        && data.request is string
+        && data.request.size() > 0
+        && data.request.size() <= 4000
+        && data.response is string
+        && data.response.size() > 0
+        && data.response.size() <= 4000
+        && data.createdAt is timestamp
+        && data.createdAt == request.time;
+    }
+
+    match /users/{userId} {
+      allow read, delete: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && validProfile();
+
+      match /communicationHistory/{recordId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && validCommunicationRecord();
+        allow update, delete: if false;
+      }
+    }
+
+    match /products/{productId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && validProduct(productId)
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if ownsStoredProduct()
+        && validProduct(productId)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.owner == resource.data.owner;
+      allow delete: if ownsStoredProduct();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

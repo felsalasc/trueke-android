@@ -8,5 +8,11 @@ data class Product(
     val condition: String = "",
     val referenceValue: Int = 0,
     val distanceKm: Double = 0.0,
-    val owner: String = ""
-)
+    val owner: String = "",
+    val ownerUid: String = ""
+) {
+    fun isOwnedBy(userUid: String?): Boolean {
+        return !userUid.isNullOrBlank() &&
+                ownerUid.isNotBlank() && ownerUid == userUid
+    }
+}

@@ -1,5 +1,8 @@
 package com.example.trueke.ui.screens
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,12 +15,15 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
@@ -33,16 +39,67 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.trueke.data.ProductDataSource
 import com.example.trueke.data.ProductRepository
 import com.example.trueke.model.Product
 import com.example.trueke.utils.filterProducts
+import com.example.trueke.utils.isValidEmail
+import com.example.trueke.utils.parseDistanceKm
+import com.example.trueke.utils.parseReferenceValue
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+
+private val productCategories = listOf(
+    "Deportes", "Videojuegos", "Instrumentos", "Tecnología", "Fotografía", "Otros"
+)
+private val productConditions = listOf("Excelente", "Buen estado", "Usado")
+private val productDistances = listOf(2, 5, 10)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onLogout: () -> Unit,
+    productDataSource: ProductDataSource = ProductRepository
+) {
+
+    val userUid = FirebaseAuth.getInstance().currentUser?.uid
+
+    var userName by remember(userUid) {
+        mutableStateOf("")
+    }
+
+    var profileMessage by remember(userUid) {
+        mutableStateOf("Cargando perfil...")
+    }
+
+    DisposableEffect(userUid) {
+        val profileListener = userUid?.let { uid ->
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(uid)
+                .addSnapshotListener { snapshot, exception ->
+                    if (exception != null) {
+                        userName = ""
+                        profileMessage = "No fue posible cargar tu perfil."
+                    } else {
+                        userName = (snapshot?.get("name") as? String)
+                            ?.trim().orEmpty()
+                        profileMessage = if (userName.isBlank()) {
+                            "Tu perfil no tiene un nombre registrado."
+                        } else {
+                            ""
+                        }
+                    }
+                }
+        }
+
+        onDispose {
+            profileListener?.remove()
+        }
+    }
 
     var products by remember {
         mutableStateOf<List<Product>>(emptyList())
@@ -76,6 +133,25 @@ fun HomeScreen() {
         mutableStateOf(false)
     }
 
+    var showCommunicationDialog by remember { mutableStateOf(false) }
+
+    var isSavingProduct by remember {
+        mutableStateOf(false)
+    }
+
+    // Se invoca al recibir el resultado, no al iniciar la operación asíncrona.
+    fun completeProductSave(handleResult: () -> Unit) {
+        try {
+            handleResult()
+        } finally {
+            isSavingProduct = false
+        }
+    }
+
+    var productSaveError by remember {
+        mutableStateOf("")
+    }
+
     var productToEdit by remember {
         mutableStateOf<Product?>(null)
     }
@@ -84,24 +160,16 @@ fun HomeScreen() {
         mutableStateOf<Product?>(null)
     }
 
-    val categories = listOf(
-        "Todas",
-        "Deportes",
-        "Videojuegos",
-        "Instrumentos",
-        "Tecnología",
-        "Fotografía",
-        "Otros"
-    )
+    val categories = listOf("Todas") + productCategories
 
     // --------------------------------------------------
     // READ - FIRESTORE
     // --------------------------------------------------
 
-    DisposableEffect(Unit) {
+    DisposableEffect(productDataSource) {
 
         val listener =
-            ProductRepository.listenProducts(
+            productDataSource.listenProducts(
 
                 onProductsChanged = { newProducts ->
 
@@ -184,6 +252,22 @@ fun HomeScreen() {
                 )
 
                 Text(
+                    text = if (userName.isNotBlank()) "Hola, $userName" else "Hola",
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                if (profileMessage.isNotEmpty()) {
+                    Text(
+                        text = profileMessage,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                TextButton(onClick = onLogout) {
+                    Text("Cerrar sesión")
+                }
+
+                Text(
                     text = "Productos cerca de ti",
                     style = MaterialTheme.typography.titleLarge
                 )
@@ -210,12 +294,20 @@ fun HomeScreen() {
                     onClick = {
 
                         productToEdit = null
+                        productSaveError = ""
                         showProductDialog = true
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
 
                     Text("+ Publicar producto")
+                }
+
+                TextButton(
+                    onClick = { showCommunicationDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Comunicación accesible")
                 }
 
                 Spacer(
@@ -290,7 +382,7 @@ fun HomeScreen() {
                             )
                         },
                         modifier = Modifier
-                            .menuAnchor()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                             .fillMaxWidth()
                     )
 
@@ -373,32 +465,14 @@ fun HomeScreen() {
                     style = MaterialTheme.typography.titleMedium
                 )
 
-                DistanceOption(
-                    text = "2 km",
-                    value = 2,
-                    selectedDistance = selectedDistance,
-                    onSelected = {
-                        selectedDistance = it
-                    }
-                )
-
-                DistanceOption(
-                    text = "5 km",
-                    value = 5,
-                    selectedDistance = selectedDistance,
-                    onSelected = {
-                        selectedDistance = it
-                    }
-                )
-
-                DistanceOption(
-                    text = "10 km",
-                    value = 10,
-                    selectedDistance = selectedDistance,
-                    onSelected = {
-                        selectedDistance = it
-                    }
-                )
+                productDistances.forEach { distance ->
+                    DistanceOption(
+                        text = "$distance km",
+                        value = distance,
+                        selectedDistance = selectedDistance,
+                        onSelected = { selectedDistance = it }
+                    )
+                }
 
                 Spacer(
                     modifier = Modifier.height(16.dp)
@@ -467,10 +541,12 @@ fun HomeScreen() {
 
             ProductCard(
                 product = product,
+                canManage = product.isOwnedBy(userUid),
 
                 onEdit = {
 
                     productToEdit = product
+                    productSaveError = ""
                     showProductDialog = true
                 },
 
@@ -505,19 +581,32 @@ fun HomeScreen() {
     // DIALOG CREAR / EDITAR
     // --------------------------------------------------
 
+    if (showCommunicationDialog) {
+        CommunicationDialog(onDismiss = { showCommunicationDialog = false })
+    }
+
     if (showProductDialog) {
 
         ProductFormDialog(
 
             product = productToEdit,
+            isSaving = isSavingProduct,
+            saveError = productSaveError,
 
             onDismiss = {
 
-                showProductDialog = false
-                productToEdit = null
+                if (!isSavingProduct) {
+                    showProductDialog = false
+                    productToEdit = null
+                    productSaveError = ""
+                }
             },
 
-            onSave = { product ->
+            onSave = saveProduct@ { product ->
+
+                if (isSavingProduct) return@saveProduct
+                isSavingProduct = true
+                productSaveError = ""
 
                 successMessage = ""
                 errorMessage = ""
@@ -525,44 +614,46 @@ fun HomeScreen() {
                 if (product.id.isBlank()) {
 
                     // CREATE
-                    ProductRepository.addProduct(
+                    productDataSource.addProduct(
 
                         product = product,
 
                         onSuccess = {
-
-                            successMessage =
-                                "Producto registrado correctamente"
-
-                            showProductDialog = false
-                            productToEdit = null
+                            completeProductSave {
+                                successMessage = "Producto registrado correctamente"
+                                showProductDialog = false
+                                productToEdit = null
+                            }
                         },
 
                         onError = { message ->
-
-                            errorMessage = message
+                            completeProductSave {
+                                productSaveError = message
+                                errorMessage = message
+                            }
                         }
                     )
 
                 } else {
 
                     // UPDATE
-                    ProductRepository.updateProduct(
+                    productDataSource.updateProduct(
 
                         product = product,
 
                         onSuccess = {
-
-                            successMessage =
-                                "Producto actualizado correctamente"
-
-                            showProductDialog = false
-                            productToEdit = null
+                            completeProductSave {
+                                successMessage = "Producto actualizado correctamente"
+                                showProductDialog = false
+                                productToEdit = null
+                            }
                         },
 
                         onError = { message ->
-
-                            errorMessage = message
+                            completeProductSave {
+                                productSaveError = message
+                                errorMessage = message
+                            }
                         }
                     )
                 }
@@ -598,7 +689,7 @@ fun HomeScreen() {
                 Button(
                     onClick = {
 
-                        ProductRepository.deleteProduct(
+                        productDataSource.deleteProduct(
 
                             productId = product.id,
 
@@ -645,6 +736,8 @@ fun HomeScreen() {
 @Composable
 fun ProductFormDialog(
     product: Product?,
+    isSaving: Boolean,
+    saveError: String,
     onDismiss: () -> Unit,
     onSave: (Product) -> Unit
 ) {
@@ -694,7 +787,9 @@ fun ProductFormDialog(
 
     AlertDialog(
 
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (!isSaving) onDismiss()
+        },
 
         title = {
 
@@ -709,10 +804,13 @@ fun ProductFormDialog(
 
         text = {
 
-            Column {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
 
                 OutlinedTextField(
                     value = name,
+                    enabled = !isSaving,
                     onValueChange = {
                         name = it
                         errorMessage = ""
@@ -730,8 +828,10 @@ fun ProductFormDialog(
 
                 OutlinedTextField(
                     value = description,
+                    enabled = !isSaving,
                     onValueChange = {
                         description = it
+                        errorMessage = ""
                     },
                     label = {
                         Text("Descripción")
@@ -744,35 +844,30 @@ fun ProductFormDialog(
                     modifier = Modifier.height(8.dp)
                 )
 
-                OutlinedTextField(
+                ProductDropdownField(
                     value = category,
-                    onValueChange = {
+                    enabled = !isSaving,
+                    options = productCategories,
+                    onSelected = {
                         category = it
+                        errorMessage = ""
                     },
-                    label = {
-                        Text("Categoría")
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
+                    label = "Categoría"
                 )
 
                 Spacer(
                     modifier = Modifier.height(8.dp)
                 )
 
-                OutlinedTextField(
+                ProductDropdownField(
                     value = condition,
-                    onValueChange = {
+                    enabled = !isSaving,
+                    options = productConditions,
+                    onSelected = {
                         condition = it
+                        errorMessage = ""
                     },
-                    label = {
-                        Text("Estado")
-                    },
-                    placeholder = {
-                        Text("Ej: Buen estado")
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
+                    label = "Estado"
                 )
 
                 Spacer(
@@ -781,8 +876,10 @@ fun ProductFormDialog(
 
                 OutlinedTextField(
                     value = referenceValue,
+                    enabled = !isSaving,
                     onValueChange = {
                         referenceValue = it
+                        errorMessage = ""
                     },
                     label = {
                         Text("Valor referencial")
@@ -800,24 +897,20 @@ fun ProductFormDialog(
                     modifier = Modifier.height(8.dp)
                 )
 
-                OutlinedTextField(
+                ProductDropdownField(
                     value = distanceKm,
-                    onValueChange = {
+                    enabled = !isSaving,
+                    options = productDistances.map { it.toDouble().toString() },
+                    onSelected = {
                         distanceKm = it
+                        errorMessage = ""
                     },
-                    label = {
-                        Text("Distancia en km")
-                    },
-                    keyboardOptions =
-                        KeyboardOptions(
-                            keyboardType =
-                                KeyboardType.Decimal
-                        ),
-                    modifier =
-                        Modifier.fillMaxWidth()
+                    label = "Distancia",
+                    optionLabel = { "${it.removeSuffix(".0")} km" }
                 )
 
-                if (errorMessage.isNotEmpty()) {
+                val visibleError = errorMessage.ifBlank { saveError }
+                if (visibleError.isNotEmpty()) {
 
                     Spacer(
                         modifier =
@@ -825,7 +918,7 @@ fun ProductFormDialog(
                     )
 
                     Text(
-                        text = errorMessage,
+                        text = visibleError,
                         color =
                             MaterialTheme
                                 .colorScheme
@@ -838,7 +931,12 @@ fun ProductFormDialog(
         confirmButton = {
 
             Button(
-                onClick = {
+                enabled = !isSaving,
+                onClick = save@ {
+
+                    if (isSaving) return@save
+                    val parsedReferenceValue = parseReferenceValue(referenceValue)
+                    val parsedDistanceKm = parseDistanceKm(distanceKm)
 
                     when {
 
@@ -866,19 +964,16 @@ fun ProductFormDialog(
                                 "Ingresa el estado del producto"
                         }
 
-                        referenceValue
-                            .toIntOrNull() == null -> {
+                        parsedReferenceValue == null -> {
 
                             errorMessage =
-                                "Ingresa un valor referencial válido"
+                                "Ingresa un entero entre 0 y 2147483647"
                         }
 
-                        distanceKm
-                            .replace(",", ".")
-                            .toDoubleOrNull() == null -> {
+                        parsedDistanceKm == null -> {
 
                             errorMessage =
-                                "Ingresa una distancia válida"
+                                "Ingresa una distancia finita mayor o igual a 0"
                         }
 
                         else -> {
@@ -906,17 +1001,9 @@ fun ProductFormDialog(
                                     condition =
                                         condition.trim(),
 
-                                    referenceValue =
-                                        referenceValue
-                                            .toInt(),
+                                    referenceValue = parsedReferenceValue,
 
-                                    distanceKm =
-                                        distanceKm
-                                            .replace(
-                                                ",",
-                                                "."
-                                            )
-                                            .toDouble(),
+                                    distanceKm = parsedDistanceKm,
 
                                     owner =
                                         product
@@ -924,7 +1011,9 @@ fun ProductFormDialog(
                                             ?.takeIf {
                                                 it.isNotBlank()
                                             }
-                                            ?: owner
+                                            ?: owner,
+                                    ownerUid = product?.ownerUid
+                                        ?: currentUser?.uid.orEmpty()
                                 )
                             )
                         }
@@ -933,7 +1022,9 @@ fun ProductFormDialog(
             ) {
 
                 Text(
-                    if (product == null) {
+                    if (isSaving) {
+                        "Guardando..."
+                    } else if (product == null) {
                         "Publicar"
                     } else {
                         "Guardar"
@@ -945,13 +1036,66 @@ fun ProductFormDialog(
         dismissButton = {
 
             TextButton(
-                onClick = onDismiss
+                onClick = onDismiss,
+                enabled = !isSaving
             ) {
 
                 Text("Cancelar")
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProductDropdownField(
+    value: String,
+    options: List<String>,
+    label: String,
+    enabled: Boolean,
+    onSelected: (String) -> Unit,
+    optionLabel: (String) -> String = { it }
+) {
+    var expanded by remember { mutableStateOf(false) }
+    // Al editar, conserva valores anteriores que no pertenecen a las nuevas opciones.
+    val availableOptions = if (value.isNotBlank() && value !in options) {
+        options + value
+    } else {
+        options
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded && enabled,
+        onExpandedChange = { if (enabled) expanded = it }
+    ) {
+        OutlinedTextField(
+            value = if (value.isBlank()) "" else optionLabel(value),
+            onValueChange = {},
+            readOnly = true,
+            enabled = enabled,
+            label = { Text(label) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && enabled)
+            },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded && enabled,
+            onDismissRequest = { expanded = false }
+        ) {
+            availableOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(optionLabel(option)) },
+                    onClick = {
+                        onSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }
 
 
@@ -1099,9 +1243,12 @@ fun TableRow(
 @Composable
 fun ProductCard(
     product: Product,
+    canManage: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val context = LocalContext.current
+    var contactError by remember(product.id, product.owner) { mutableStateOf("") }
 
     Card(
         modifier =
@@ -1194,35 +1341,65 @@ fun ProductCard(
                     Modifier.height(12.dp)
             )
 
-            Button(
-                onClick = onEdit,
-                modifier =
-                    Modifier.fillMaxWidth()
-            ) {
+            if (canManage) {
+                Button(
+                    onClick = onEdit,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Editar")
+                }
 
-                Text("Editar")
+                TextButton(
+                    onClick = onDelete,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Eliminar")
+                }
             }
 
-            TextButton(
-                onClick = onDelete,
-                modifier =
-                    Modifier.fillMaxWidth()
-            ) {
+            if (!canManage) {
+                Button(
+                    onClick = contact@ {
+                        contactError = ""
+                        val recipient = product.owner.trim()
+                        if (!recipient.isValidEmail()) {
+                            contactError = "Este producto no tiene un correo de contacto válido."
+                            return@contact
+                        }
 
-                Text("Eliminar")
-            }
+                        val subject = "TRUEKE: consulta por ${product.name}"
+                        val message = "Hola, me interesa tu producto ${product.name}. " +
+                            "¿Está disponible para un trueque?"
+                        val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse(
+                                "mailto:${Uri.encode(recipient)}" +
+                                    "?subject=${Uri.encode(subject)}&body=${Uri.encode(message)}"
+                            )
+                            putExtra(Intent.EXTRA_EMAIL, arrayOf(recipient))
+                            putExtra(Intent.EXTRA_SUBJECT, subject)
+                            putExtra(Intent.EXTRA_TEXT, message)
+                        }
+                        try {
+                            context.startActivity(emailIntent)
+                        } catch (_: ActivityNotFoundException) {
+                            contactError = "No hay una aplicación de correo disponible. " +
+                                "Instala o habilita una para contactar al publicador."
+                        } catch (_: SecurityException) {
+                            contactError = "No se pudo abrir la aplicación de correo."
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Contactar por correo")
+                }
 
-            Button(
-                onClick = {
-                    // Futuro chat interno
-                },
-                modifier =
-                    Modifier.fillMaxWidth()
-            ) {
-
-                Text(
-                    "Contactar por mensaje"
-                )
+                if (contactError.isNotBlank()) {
+                    Text(
+                        text = contactError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         }
     }

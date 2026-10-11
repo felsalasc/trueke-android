@@ -22,11 +22,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.trueke.utils.isValidEmail
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun ForgotPasswordScreen(
     onBackToLogin: () -> Unit
 ) {
+
+    val auth = FirebaseAuth.getInstance()
 
     var email by remember {
         mutableStateOf("")
@@ -37,6 +41,10 @@ fun ForgotPasswordScreen(
     }
 
     var isError by remember {
+        mutableStateOf(false)
+    }
+
+    var isLoading by remember {
         mutableStateOf(false)
     }
 
@@ -71,6 +79,7 @@ fun ForgotPasswordScreen(
             onValueChange = {
                 email = it
                 message = ""
+                isError = false
             },
             label = {
                 Text("Correo electrónico")
@@ -80,7 +89,8 @@ fun ForgotPasswordScreen(
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
             ),
-            isError = isError
+            isError = isError,
+            enabled = !isLoading
         )
 
         if (message.isNotEmpty()) {
@@ -116,8 +126,7 @@ fun ForgotPasswordScreen(
                         message = "Debes ingresar tu correo electrónico."
                     }
 
-                    !cleanEmail.contains("@") ||
-                            !cleanEmail.contains(".") -> {
+                    !cleanEmail.isValidEmail() -> {
 
                         isError = true
                         message = "Ingresa un correo electrónico válido."
@@ -125,15 +134,27 @@ fun ForgotPasswordScreen(
 
                     else -> {
                         isError = false
-                        message =
-                            "Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña."
+                        message = ""
+                        isLoading = true
+
+                        auth.sendPasswordResetEmail(cleanEmail)
+                            .addOnCompleteListener { task ->
+                                isLoading = false
+                                isError = !task.isSuccessful
+                                message = if (task.isSuccessful) {
+                                    "Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña."
+                                } else {
+                                    "No fue posible solicitar la recuperación. Inténtalo nuevamente."
+                                }
+                            }
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         ) {
 
-            Text("Recuperar contraseña")
+            Text(if (isLoading) "Enviando..." else "Recuperar contraseña")
         }
 
         Spacer(
@@ -141,7 +162,8 @@ fun ForgotPasswordScreen(
         )
 
         TextButton(
-            onClick = onBackToLogin
+            onClick = onBackToLogin,
+            enabled = !isLoading
         ) {
 
             Text("Volver al inicio de sesión")

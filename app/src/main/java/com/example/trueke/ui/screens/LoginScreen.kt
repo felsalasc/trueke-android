@@ -1,6 +1,5 @@
 package com.example.trueke.ui.screens
 
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -37,7 +35,6 @@ fun LoginScreen(
 ) {
 
     val auth = FirebaseAuth.getInstance()
-    val context = LocalContext.current
 
     var email by remember {
         mutableStateOf("")
@@ -151,28 +148,6 @@ fun LoginScreen(
                         ).addOnCompleteListener { task ->
 
                             if (task.isSuccessful) {
-
-                                // Guardar datos básicos de sesión
-                                val sharedPreferences =
-                                    context.getSharedPreferences(
-                                        "trueke_session",
-                                        Context.MODE_PRIVATE
-                                    )
-
-                                sharedPreferences.edit()
-                                    .putBoolean(
-                                        "is_logged_in",
-                                        true
-                                    )
-                                    .putString(
-                                        "user_email",
-                                        cleanEmail
-                                    )
-                                    .putString(
-                                        "user_uid",
-                                        auth.currentUser?.uid ?: ""
-                                    )
-                                    .apply()
 
                                 errorMessage = ""
                                 isLoading = false
